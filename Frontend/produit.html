@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    <nav class="bg-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/Frontend/dashboard.html" class="text-black text-lg font-semibold">MACH</a>
+            <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600">
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-10 p-5 bg-white shadow-md rounded-lg">
+        <h2 class="text-3xl font-semibold text-center text-gray-700 mb-6">Add New Product</h2>
+
+        <!-- Form to Add Product -->
+        <form id="add-product-form">
+            <div class="mb-4">
+                <label for="product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                <input type="text" id="product-name"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label for="product-price" class="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" id="product-price" step="1" min="1"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label for="product-description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="product-description"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="image" class="block text-sm font-medium text-gray-700">Product Image</label>
+                <input type="text" id="image"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+
+            <div class="mb-4">
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select id="category"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+                    <option value="">Select Category</option>
+                    <option value="Accessoire">Accessoires</option>
+                    <option value="Pâtisserie">Pâtisserie</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600">
+                Add Product
+            </button>
+        </form>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // If no token, redirect to login page
+                window.location.href = '/Frontend/login.html';
+            }
+        });
+
+        // Handle product addition
+        document.getElementById('add-product-form').addEventListener('submit', async (event) => {
+            event.preventDefault();  // Prevent default form submission
+
+            const name = document.getElementById('product-name').value.trim();
+            const price = document.getElementById('product-price').value.trim();
+            const description = document.getElementById('product-description').value.trim();
+            const image = document.getElementById('image').value.trim(); // Récupérer le fichier image
+            const category = document.getElementById('category').value.trim();
+
+            // Ensure all fields are filled
+            if (!name || !price || !category || !image) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:5001/api/products/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        price: parseFloat(price),
+                        description: description,
+                        category: category,
+                        image: image
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Product added successfully!');
+                    window.location.href = '/Frontend/dashboard.html'; // Redirect to dashboard
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.message || 'Failed to add product.');
+                }
+            } catch (error) {
+                console.error('Error adding product:', error.message);
+                alert('Error adding product.');
+            }
+
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('token'); // Remove token from localStorage
+            window.location.href = '/Frontend/login.html'; // Redirect to login page
+        });
+    </script>
+
+</body>
+
+</html>

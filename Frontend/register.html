@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-center text-gray-700 mb-6">Create an Account</h2>
+
+        <form id="registerForm" class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="username" name="username" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                <p id="usernameError" class="text-red-500 text-xs hidden">Please enter a valid username.</p>
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" name="password" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                <p id="passwordError" class="text-red-500 text-xs hidden">Password must be at least 6 characters.</p>
+            </div>
+
+            <div>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" class="mt-1 block w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                <p id="confirmPasswordError" class="text-red-500 text-xs hidden">Passwords do not match.</p>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-500 text-white p-2.5 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">Register</button>
+        </form>
+
+        <p class="mt-4 text-center text-sm text-gray-600">
+            Already have an account? <a href="/Frontend/login.html" class="text-blue-500 hover:text-blue-600">Login</a>
+        </p>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('registerForm');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            let formIsValid = true;
+
+            // Clear any previous errors
+            document.getElementById('usernameError').classList.add('hidden');
+            document.getElementById('passwordError').classList.add('hidden');
+            document.getElementById('confirmPasswordError').classList.add('hidden');
+
+            // Basic validation
+            if (!username) {
+                document.getElementById('usernameError').classList.remove('hidden');
+                formIsValid = false;
+            }
+
+            if (password.length < 6) {
+                document.getElementById('passwordError').classList.remove('hidden');
+                formIsValid = false;
+            }
+
+            if (password !== confirmPassword) {
+                document.getElementById('confirmPasswordError').classList.remove('hidden');
+                formIsValid = false;
+            }
+
+            if (!formIsValid) {
+                return; // Stop submission if validation fails
+            }
+
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.location.href = "dashboard.html"; // Redirect to dashboard
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                alert('An error occurred: ' + err.message);
+            }
+        });
+    </script>
+
+</body>
+</html>

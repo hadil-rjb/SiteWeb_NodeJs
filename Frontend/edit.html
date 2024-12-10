@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Product</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <nav class="bg-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-black text-lg font-semibold">MACH</div>
+            <button id="save-btn" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                Save Changes
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-10 p-5 bg-white shadow-md rounded-lg">
+        <h2 class="text-3xl font-semibold text-center text-gray-700 mb-6">Edit Product</h2>
+
+        <form id="edit-product-form">
+            <div class="mb-4">
+                <label for="product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                <input type="text" id="product-name"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label for="product-price" class="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" id="product-price" step="1" min="1"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required>
+            </div>
+            <div class="mb-4">
+                <label for="product-description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="product-description"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    required></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="image" class="block text-sm font-medium text-gray-700">Product Image (URL)</label>
+                <input type="text" id="image" placeholder="images.jpg"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <!-- Category Select -->
+            <div class="mb-4">
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select id="category"
+                    class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="Accessoire">Accessoires</option>
+                    <option value="Pâtisserie">Pâtisserie</option>
+                    <!-- Add other categories if necessary -->
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const apiBaseUrl = 'http://localhost:5001/api/products';
+
+        // Helper function to retrieve product ID from URL
+        function getProductId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // Load product details for editing
+        async function loadProductDetails() {
+            const productId = getProductId();
+            if (!productId) {
+                alert('Product ID is missing.');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/Frontend/login.html';
+                    return;
+                }
+
+                const response = await fetch(`${apiBaseUrl}/${productId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch product details.');
+                }
+
+                const product = await response.json();
+                document.getElementById('product-name').value = product.name || '';
+                document.getElementById('product-price').value = product.price || '';
+                document.getElementById('product-description').value = product.description || '';
+                document.getElementById('image').value = product.image || '';
+                document.getElementById('category').value = product.category || 'accessoire';  // Set the category
+            } catch (error) {
+                console.error(error.message);
+                alert('Error loading product details.');
+            }
+        }
+
+        // Save updated product details
+        async function saveProduct() {
+            const productId = getProductId();
+            if (!productId) {
+                alert('Product ID is missing.');
+                return;
+            }
+
+            const name = document.getElementById('product-name').value.trim();
+            const price = parseFloat(document.getElementById('product-price').value.trim());
+            const description = document.getElementById('product-description').value.trim();
+            const image = document.getElementById('image').value.trim();
+            const category = document.getElementById('category').value;  // Get the selected category
+
+            if (!name || isNaN(price)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
+
+            const updatedProduct = {
+                name,
+                price,
+                description,
+                image,
+                category // Add category to the updated product data
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/Frontend/login.html';
+                    return;
+                }
+
+                const response = await fetch(`${apiBaseUrl}/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedProduct)
+                });
+
+                if (response.ok) {
+                    alert('Product updated successfully!');
+                    window.location.href = '/Frontend/dashboard.html';
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.message || 'Failed to update product. Please check your inputs.');
+                }
+            } catch (error) {
+                console.error(error.message);
+                alert('Error saving product.');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('save-btn').addEventListener('click', saveProduct);
+        window.addEventListener('DOMContentLoaded', loadProductDetails);
+    </script>
+</body>
+
+</html>

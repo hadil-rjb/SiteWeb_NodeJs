@@ -1,0 +1,247 @@
+<script>
+            // Vérifier si l'utilisateur est connecté avant de charger la page
+            window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Si pas de token, rediriger vers la page de connexion
+                window.location.href = '/Frontend/login.html';
+            }
+        });
+</script>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    <nav class="bg-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-black text-lg font-semibold">MACH</div>
+            <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600">
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-10 p-5 bg-white shadow-md rounded-lg mb-12">
+        <h2 class="text-3xl font-semibold text-center text-gray-700 mb-6">Products Dashboard</h2>
+
+        <!-- Filter by Category -->
+        <div class="mb-4">
+            <label for="category-filter" class="block text-sm font-medium text-gray-700">Filter by Category</label>
+            <select id="category-filter"
+                class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">All</option>
+                <option value="Accessoire">Accessoires</option>
+                <option value="Pâtisserie">Pâtisserie</option>
+            </select>
+        </div>
+
+        <!-- Admin Add Product Button -->
+        <div id="admin-add-button" class="mb-4 hidden">
+            <button id="addProduct" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                Add Product
+            </button>
+        </div>
+
+        <!-- Products Table -->
+        <table class="min-w-full bg-white border-collapse">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">#</th>
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">Product Name</th>
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">Price</th>
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">Category</th>
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">Image</th>
+                    <th class="py-2 px-4 text-left text-sm font-medium text-gray-600">Description</th>
+                    <th id="actions-header" class="py-2 px-4 text-left text-sm font-medium text-gray-600">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="product-list">
+                <!-- Products will be loaded dynamically -->
+            </tbody>
+        </table>
+
+        <!-- Pagination Controls -->
+        <div class="mt-4 flex justify-center">
+            <button id="prev-page" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-md mr-2 disabled:opacity-50">
+                Previous
+            </button>
+            <span id="current-page" class="py-2 px-4">1</span>
+            <button id="next-page" class="bg-gray-300 text-gray-700 py-2 px-4 rounded-md ml-2 disabled:opacity-50">
+                Next
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+
+
+        let currentPage = 1;
+        const limit = 5;
+
+        document.getElementById('category-filter').addEventListener('change', () => {
+            currentPage = 1;  // Réinitialiser à la première page lorsque le filtre change
+            loadProducts();
+        });
+
+        async function loadProducts(page = 1) {
+            const category = document.getElementById('category-filter').value;  // Obtenir la catégorie sélectionnée
+            try {
+                const token = localStorage.getItem('token');
+
+                const response = await fetch(`http://localhost:5001/api/products?page=${page}&limit=${limit}&category=${category}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP! Statut: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const productList = document.getElementById('product-list');
+                const role = getUserRole();
+
+                productList.innerHTML = '';  // Réinitialiser le contenu de la liste
+
+                if (data.products.length === 0) {
+                    // Si aucun produit n'est trouvé, désactiver la pagination
+                    document.getElementById('prev-page').disabled = true;
+                    document.getElementById('next-page').disabled = true;
+                    return;  // Sortir de la fonction sans ajouter de lignes à la table
+                }
+
+                data.products.forEach((product, index) => {
+                    const row = document.createElement('tr');
+                    row.classList.add('border-b', 'hover:bg-gray-50');
+                    row.innerHTML = `
+                <td class="py-3 px-4 text-sm text-gray-700">${(page - 1) * limit + index + 1}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">${product.name}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">${product.price}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">${product.category || 'N/A'}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">
+                    <img src="/Frontend/images/${product.image}" alt="Product Image" class="w-16 h-16 object-cover rounded">
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-700">${product.description}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">
+                    ${role === 'admin' ? `
+                        <button onclick="editProduct('${product._id}')" 
+                            class="bg-yellow-500 text-white py-1 px-3 rounded-md hover:bg-yellow-600 mr-2">
+                            Edit
+                        </button>
+                        <button onclick="deleteProduct('${product._id}')" 
+                            class="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600">
+                            Delete
+                        </button>
+                     ` : ''}
+                </td>
+            `;
+                    productList.appendChild(row);
+                });
+
+                updatePaginationControls(data.page, data.totalPages);
+
+                // Masquer la colonne Actions si l'utilisateur n'est pas un administrateur
+                if (role !== 'admin') {
+                    document.getElementById('actions-header').style.display = 'none';
+                } else {
+                    document.getElementById('actions-header').style.display = '';
+                }
+
+            } catch (error) {
+                console.error('Erreur lors du chargement des produits:', error.message);
+            }
+        }
+
+        function updatePaginationControls(current, totalPages) {
+            const prevPage = document.getElementById('prev-page');
+            const nextPage = document.getElementById('next-page');
+            const currentPageSpan = document.getElementById('current-page');
+
+            currentPageSpan.textContent = current;
+            prevPage.disabled = current === 1;
+            nextPage.disabled = current === totalPages || document.getElementById('product-list').childElementCount === 0;
+        }
+
+
+        function changePage(increment) {
+            currentPage += increment;
+            loadProducts(currentPage);
+        }
+
+        function getUserRole() {
+            return localStorage.getItem('role');
+        }
+
+        document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
+        document.getElementById('next-page').addEventListener('click', () => changePage(1));
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('token'); // Supprimer le token du localStorage
+            localStorage.removeItem('role');  // Supprimer le rôle également
+            window.location.href = '/Frontend/login.html'; // Rediriger vers la page de login
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const role = getUserRole();
+            if (role === 'admin') {
+                document.getElementById('admin-add-button').classList.remove('hidden');
+                document.getElementById('addProduct').addEventListener('click', addProduct);
+            }
+            loadProducts();
+        });
+
+        function addProduct() {
+            // Rediriger vers la page d'édition avec l'ID du produit dans l'URL
+            window.location.href = `/Frontend/produit.html`;
+        }
+
+        // Fonction pour gérer l'édition du produit
+        function editProduct(productId) {
+            // Rediriger vers la page d'édition avec l'ID du produit dans l'URL
+            window.location.href = `/Frontend/edit.html?id=${productId}`;
+        }
+
+        // Fonction pour gérer la suppression du produit
+        async function deleteProduct(productId) {
+            // Demander confirmation avant de supprimer
+            const confirmation = confirm("Êtes-vous sûr de vouloir supprimer ce produit?");
+            if (!confirmation) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`http://localhost:5001/api/products/${productId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    alert('Produit supprimé avec succès');
+                    loadProducts(currentPage); // Recharger les produits après suppression
+                } else {
+                    alert('Échec de la suppression du produit');
+                }
+            } catch (error) {
+                console.error('Erreur lors de la suppression du produit:', error.message);
+                alert('Erreur lors de la suppression du produit');
+            }
+        }
+    </script>
+</body>
+
+</html>
